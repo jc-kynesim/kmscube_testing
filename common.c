@@ -34,6 +34,9 @@
 
 #include "common.h"
 
+#define USE_SURFACELESS 1
+
+
 static struct gbm gbm;
 
 WEAK struct gbm_surface *
@@ -340,6 +343,13 @@ int init_egl(struct egl *egl, const struct gbm *gbm, int samples)
 	get_proc_client(EGL_EXT_platform_base, eglGetPlatformDisplayEXT);
 
 	if (egl->eglGetPlatformDisplayEXT) {
+#if USE_SURFACELESS
+		if (!gbm->surface) {
+			egl->display = egl->eglGetPlatformDisplayEXT(EGL_PLATFORM_SURFACELESS_MESA,
+					EGL_DEFAULT_DISPLAY, NULL);
+		}
+		else
+#endif
 		egl->display = egl->eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_KHR,
 				gbm->dev, NULL);
 	} else {
@@ -379,6 +389,12 @@ int init_egl(struct egl *egl, const struct gbm *gbm, int samples)
 		return -1;
 	}
 
+#if USE_SURFACELESS
+	if (!gbm->surface) {
+		egl->config = EGL_NO_CONFIG_KHR;
+	}
+	else
+#endif
 	if (!egl_choose_config(egl->display, config_attribs, gbm->format,
                                &egl->config)) {
 		printf("failed to choose config\n");
